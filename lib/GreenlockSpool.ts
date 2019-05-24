@@ -15,7 +15,7 @@ import { keys, cloneDeep, includes } from 'lodash'
  * @class Letsencrypt
  * @see {@link http://fabrixjs.io/doc/spool}
  */
-export class GreenLockSpool extends Spool {
+export class GreenlockSpool extends Spool {
   constructor(app) {
     super(app, {
       config: config,
@@ -45,19 +45,25 @@ export class GreenLockSpool extends Spool {
     const host = this.app.config.get('web.host')
     const portHttp = this.app.config.get('web.portHttp') || 80
     const redirectToHttps = this.app.config.get('web.redirectToHttps') || true
-    const config = this.app.config.get('greenlock')
+    const greenlockConfig = this.app.config.get('greenlock')
 
-    if (config.enabled) {
+    if (greenlockConfig.enabled) {
       this.app.log.debug('Letsencrypt setup')
       this.app.config.set('web.externalConfig', (fabrixApp, expressApp) => {
-        const le = greenlock.create(cloneDeep(config))
+        const le = greenlock.create(cloneDeep(greenlockConfig))
         return new Promise((resolve, reject) => {
           const nativeServer = https.createServer(le.httpsOptions, le.middleware(expressApp))
             .listen(port, host, err => {
-              if (err) return reject(err)
-              const httpServer = http.createServer(redirectToHttps ? le.middleware(require('redirect-https')()) : le.middleware(expressApp))
-                .listen(portHttp, host, err => {
-                  if (err) return reject(err)
+              if (err) {
+                return reject(err)
+              }
+              const httpServer = http.createServer(redirectToHttps
+                ? le.middleware(require('redirect-https')())
+                : le.middleware(expressApp))
+                .listen(portHttp, host, _err => {
+                  if (_err) {
+                    return reject(_err)
+                  }
                   resolve([nativeServer, httpServer])
                 })
             })
